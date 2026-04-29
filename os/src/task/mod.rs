@@ -56,7 +56,7 @@ lazy_static! {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
             syscall_times: [0; MAX_SYSCALL_NUM],
-            total_time: 0,
+            total_runtime: 0,
             last_start_time: 0,
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
@@ -128,7 +128,7 @@ impl TaskManager {
             let current = inner.current_task;
             let now = get_time();
             let current_start_time = inner.tasks[current].last_start_time;
-            inner.tasks[current].total_time += now.saturating_sub(current_start_time);
+            inner.tasks[current].total_runtime += now.saturating_sub(current_start_time);
             inner.tasks[next].task_status = TaskStatus::Running;
             inner.tasks[next].last_start_time = now;
             inner.current_task = next;
@@ -163,9 +163,9 @@ impl TaskManager {
         let task = &inner.tasks[id];
         let now = get_time();
         let time = if id == inner.current_task && task.task_status == TaskStatus::Running {
-            task.total_time + now.saturating_sub(task.last_start_time)
+            task.total_runtime + now.saturating_sub(task.last_start_time)
         } else {
-            task.total_time
+            task.total_runtime
         };
         unsafe {
             (*task_info).id = id;

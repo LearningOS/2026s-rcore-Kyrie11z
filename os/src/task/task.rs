@@ -15,7 +15,7 @@ pub struct TaskControlBlock {
     /// Syscall statistics indexed by syscall id
     pub syscall_times: [usize; MAX_SYSCALL_NUM],
     /// Accumulated running time of the task
-    pub total_time: usize,
+    pub total_runtime: usize,
     /// The timestamp when the task was last scheduled in
     pub last_start_time: usize,
 }
