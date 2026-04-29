@@ -24,7 +24,7 @@ const SYSCALL_TASK_INFO: usize = 410;
 mod fs;
 mod process;
 
-use crate::task::record_syscall;
+use crate::task::{record_syscall, TaskInfo};
 use fs::*;
 use process::*;
 
