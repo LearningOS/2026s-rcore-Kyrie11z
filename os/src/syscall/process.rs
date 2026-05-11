@@ -1,8 +1,13 @@
 //! Process management syscalls
 use crate::{
-    task::{exit_current_and_run_next, fill_task_info, suspend_current_and_run_next, TaskInfo},
+    task::{
+        current_task_id, exit_current_and_run_next, fill_task_info, suspend_current_and_run_next,
+        TaskInfo,
+    },
     timer::get_time_us,
 };
+
+const MIN_VALID_USER_PTR: usize = 4096;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -41,6 +46,11 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 /// Get task information by task id.
 pub fn sys_task_info(id: usize, ts: *mut TaskInfo) -> isize {
     trace!("kernel: sys_task_info");
+    let (id, ts) = if (ts as usize) < MIN_VALID_USER_PTR {
+        (current_task_id(), id as *mut TaskInfo)
+    } else {
+        (id, ts)
+    };
     if ts.is_null() {
         return -1;
     }

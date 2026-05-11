@@ -154,27 +154,39 @@ impl TaskManager {
         }
     }
 
+    /// Get the id of the currently running task.
+    fn current_task_id(&self) -> usize {
+        self.inner.exclusive_access().current_task
+    }
+
     /// Fill `task_info` with information for task `id`.
     fn fill_task_info(&self, id: usize, task_info: *mut TaskInfo) -> bool {
-        let inner = self.inner.exclusive_access();
-        if id >= self.num_app {
-            return false;
-        }
-        let task = &inner.tasks[id];
-        let now = get_time();
-        let time = if id == inner.current_task && task.task_status == TaskStatus::Running {
-            task.total_runtime + now.saturating_sub(task.last_start_time)
-        } else {
-            task.total_runtime
+        let (status, time) = {
+            let inner = self.inner.exclusive_access();
+            if id >= self.num_app {
+                return false;
+            }
+            let task = &inner.tasks[id];
+            let now = get_time();
+            let time = if id == inner.current_task && task.task_status == TaskStatus::Running {
+                task.total_runtime + now.saturating_sub(task.last_start_time)
+            } else {
+                task.total_runtime
+            };
+            (task.task_status, time)
         };
         unsafe {
             (*task_info).id = id;
-            (*task_info).status = task.task_status;
+            (*task_info).status = status;
             (*task_info).time = time;
             for syscall_id in 0..MAX_SYSCALL_NUM {
+                let times = {
+                    let inner = self.inner.exclusive_access();
+                    inner.tasks[id].syscall_times[syscall_id]
+                };
                 (*task_info).call[syscall_id] = SyscallInfo {
                     id: syscall_id,
-                    times: task.syscall_times[syscall_id],
+                    times,
                 };
             }
         }
@@ -218,6 +230,11 @@ pub fn exit_current_and_run_next() {
 /// Record one syscall invocation for the currently running task.
 pub fn record_syscall(syscall_id: usize) {
     TASK_MANAGER.record_syscall(syscall_id);
+}
+
+/// Get the id of the currently running task.
+pub fn current_task_id() -> usize {
+    TASK_MANAGER.current_task_id()
 }
 
 /// Fill `task_info` with information for task `id`.
