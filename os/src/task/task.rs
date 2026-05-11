@@ -24,7 +24,9 @@ pub struct TaskControlBlock {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct SyscallInfo {
+    /// System call number.
     pub id: usize,
+    /// Number of times this system call has been invoked by the task.
     pub times: usize,
 }
 
@@ -32,9 +34,13 @@ pub struct SyscallInfo {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TaskInfo {
+    /// Task identifier.
     pub id: usize,
+    /// Current task status.
     pub status: TaskStatus,
+    /// Per-system-call invocation counters indexed by syscall number.
     pub call: [SyscallInfo; MAX_SYSCALL_NUM],
+    /// Accumulated running time of the task.
     pub time: usize,
 }
 
