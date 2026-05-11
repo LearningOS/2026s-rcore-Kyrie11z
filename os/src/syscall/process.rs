@@ -1,17 +1,8 @@
 //! Process management syscalls
 use crate::{
-    task::{
-        current_task_id, exit_current_and_run_next, fill_task_info, suspend_current_and_run_next,
-        TaskInfo,
-    },
+    task::{current_syscall_times, exit_current_and_run_next, suspend_current_and_run_next},
     timer::get_time_us,
 };
-
-const MIN_VALID_USER_PTR: usize = 4096;
-
-fn is_valid_user_ptr(ptr: usize) -> bool {
-    ptr >= MIN_VALID_USER_PTR
-}
 
 #[repr(C)]
 #[derive(Debug)]
@@ -47,22 +38,18 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
     0
 }
 
-/// Get task information by task id.
-pub fn sys_task_info(id: usize, ts: *mut TaskInfo) -> isize {
-    trace!("kernel: sys_task_info");
-    let (id, ts) = if is_valid_user_ptr(ts as usize) {
-        (id, ts)
-    } else if is_valid_user_ptr(id) {
-        (current_task_id(), id as *mut TaskInfo)
-    } else {
-        return -1;
-    };
-    if ts.is_null() {
-        return -1;
-    }
-    if fill_task_info(id, ts) {
-        0
-    } else {
-        -1
+/// Trace current task memory and syscall counters.
+pub fn sys_trace(trace_request: usize, id: usize, data: usize) -> isize {
+    trace!("kernel: sys_trace");
+    match trace_request {
+        0 => unsafe { *(id as *const u8) as isize },
+        1 => {
+            unsafe {
+                *(id as *mut u8) = data as u8;
+            }
+            0
+        }
+        2 => current_syscall_times(id).map_or(-1, |times| times as isize),
+        _ => -1,
     }
 }

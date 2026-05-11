@@ -154,40 +154,16 @@ impl TaskManager {
         }
     }
 
-    /// Get the id of the currently running task.
-    fn current_task_id(&self) -> usize {
-        self.inner.exclusive_access().current_task
+    /// Get one syscall counter of the currently running task.
+    fn current_syscall_times(&self, syscall_id: usize) -> Option<usize> {
+        if syscall_id < MAX_SYSCALL_NUM {
+            let inner = self.inner.exclusive_access();
+            Some(inner.tasks[inner.current_task].syscall_times[syscall_id])
+        } else {
+            None
+        }
     }
 
-    /// Fill `task_info` with information for task `id`.
-    fn fill_task_info(&self, id: usize, task_info: *mut TaskInfo) -> bool {
-        let (status, time, syscall_times) = {
-            let inner = self.inner.exclusive_access();
-            if id >= self.num_app {
-                return false;
-            }
-            let task = &inner.tasks[id];
-            let now = get_time();
-            let time = if id == inner.current_task && task.task_status == TaskStatus::Running {
-                task.total_runtime + now.saturating_sub(task.last_start_time)
-            } else {
-                task.total_runtime
-            };
-            (task.task_status, time, task.syscall_times)
-        };
-        unsafe {
-            (*task_info).id = id;
-            (*task_info).status = status;
-            (*task_info).time = time;
-            for syscall_id in 0..MAX_SYSCALL_NUM {
-                (*task_info).call[syscall_id] = SyscallInfo {
-                    id: syscall_id,
-                    times: syscall_times[syscall_id],
-                };
-            }
-        }
-        true
-    }
 }
 
 /// Run the first task in task list.
@@ -228,12 +204,7 @@ pub fn record_syscall(syscall_id: usize) {
     TASK_MANAGER.record_syscall(syscall_id);
 }
 
-/// Get the id of the currently running task.
-pub fn current_task_id() -> usize {
-    TASK_MANAGER.current_task_id()
-}
-
-/// Fill `task_info` with information for task `id`.
-pub fn fill_task_info(id: usize, task_info: *mut TaskInfo) -> bool {
-    TASK_MANAGER.fill_task_info(id, task_info)
+/// Get one syscall counter of the currently running task.
+pub fn current_syscall_times(syscall_id: usize) -> Option<usize> {
+    TASK_MANAGER.current_syscall_times(syscall_id)
 }
