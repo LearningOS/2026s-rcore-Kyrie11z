@@ -1,14 +1,28 @@
 //! Process management syscalls
 use crate::{
+    config::CLOCK_FREQ,
     task::{current_syscall_times, exit_current_and_run_next, suspend_current_and_run_next},
-    timer::get_time_us,
+    timer::{get_time, get_time_us},
 };
+
+const CLOCK_MONOTONIC: usize = 1;
 
 #[repr(C)]
 #[derive(Debug)]
 pub struct TimeVal {
+    /// Seconds.
     pub sec: usize,
+    /// Microseconds.
     pub usec: usize,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct TimeSpec {
+    /// Seconds.
+    pub tv_sec: usize,
+    /// Nanoseconds.
+    pub tv_nsec: usize,
 }
 
 /// task exits and submit an exit code
@@ -33,6 +47,22 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
         *ts = TimeVal {
             sec: us / 1_000_000,
             usec: us % 1_000_000,
+        };
+    }
+    0
+}
+
+/// get time with second and nanosecond
+pub fn sys_clock_get_time(clock_id: usize, ts: *mut TimeSpec) -> isize {
+    trace!("kernel: sys_clock_get_time");
+    if clock_id != CLOCK_MONOTONIC {
+        return -1;
+    }
+    let ns = get_time() * 1_000_000_000 / CLOCK_FREQ;
+    unsafe {
+        *ts = TimeSpec {
+            tv_sec: ns / 1_000_000_000,
+            tv_nsec: ns % 1_000_000_000,
         };
     }
     0
