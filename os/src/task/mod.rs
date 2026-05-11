@@ -161,7 +161,7 @@ impl TaskManager {
 
     /// Fill `task_info` with information for task `id`.
     fn fill_task_info(&self, id: usize, task_info: *mut TaskInfo) -> bool {
-        let (status, time) = {
+        let (status, time, syscall_times) = {
             let inner = self.inner.exclusive_access();
             if id >= self.num_app {
                 return false;
@@ -173,20 +173,16 @@ impl TaskManager {
             } else {
                 task.total_runtime
             };
-            (task.task_status, time)
+            (task.task_status, time, task.syscall_times)
         };
         unsafe {
             (*task_info).id = id;
             (*task_info).status = status;
             (*task_info).time = time;
             for syscall_id in 0..MAX_SYSCALL_NUM {
-                let times = {
-                    let inner = self.inner.exclusive_access();
-                    inner.tasks[id].syscall_times[syscall_id]
-                };
                 (*task_info).call[syscall_id] = SyscallInfo {
                     id: syscall_id,
-                    times,
+                    times: syscall_times[syscall_id],
                 };
             }
         }

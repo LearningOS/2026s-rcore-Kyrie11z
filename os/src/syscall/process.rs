@@ -9,6 +9,10 @@ use crate::{
 
 const MIN_VALID_USER_PTR: usize = 4096;
 
+fn is_valid_user_ptr(ptr: usize) -> bool {
+    ptr >= MIN_VALID_USER_PTR
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct TimeVal {
@@ -46,10 +50,12 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 /// Get task information by task id.
 pub fn sys_task_info(id: usize, ts: *mut TaskInfo) -> isize {
     trace!("kernel: sys_task_info");
-    let (id, ts) = if (ts as usize) < MIN_VALID_USER_PTR {
+    let (id, ts) = if is_valid_user_ptr(ts as usize) {
+        (id, ts)
+    } else if is_valid_user_ptr(id) {
         (current_task_id(), id as *mut TaskInfo)
     } else {
-        (id, ts)
+        return -1;
     };
     if ts.is_null() {
         return -1;
